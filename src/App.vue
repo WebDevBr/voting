@@ -1,7 +1,7 @@
 <template>
   <div id="app">
     <img src="./assets/logo.png">
-    <h2>O que você quer aprender no próximo domingo (4 de dezembro)</h2>
+    <h2>O que você quer aprender no WebDevBr?</h2>
     <ul>
       <li><a href="https://www.webdevbr.com.br" target="_blank">site</a></li>
       <li><a href="https://www.facebook.com/webdevbrasil/" target="_blank">facebook</a></li>
