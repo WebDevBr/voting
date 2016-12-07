@@ -22,10 +22,12 @@
         <p><a href="" @click.prevent="logout()">deslogar</a></p>
       </div>
 
+      <p>Temos {{ questionsTotal }} sugestões.</p>
+
       <input type="text" v-model.trim="add_question" @keyup.enter="add()" placeholder="Adicione uma nova sugestão..." autofocus>
       <nav>
         <ul>
-          <li v-for="(o, index) in questions"><a href="" @click.prevent="vote(o['.key'])">{{ o.label }} <span>{{ o.voting }} votos</span></a></li>
+          <li v-for="(o, index) in questionsOrdered"><a href="" @click.prevent="vote(o['.key'])">{{ o.label }} <span>{{ o.voting }} votos</span></a></li>
         </ul>
       </nav>
     </div>
@@ -36,6 +38,7 @@
 <script>
 import {Firebase} from './Firebase';
 import alertify from 'alertifyjs';
+import _ from 'lodash';
 
 require('../node_modules/alertifyjs/build/css/alertify.css');
 require('../node_modules/alertifyjs/build/css/themes/default.rtl.min.css');
@@ -54,14 +57,50 @@ export default {
       isLogged: false
     }
   },
+  computed: {
+    questionsOrdered() {
+      return _.orderBy(this.questions, 'voting', 'desc');
+    },
+    questionsTotal() {
+      return this.questions.length;
+    }
+  },
   created() {
     firebase.isLogged().then((user)=>{
       this.isLogged = user;
     })
   },
+  watch: {
+    questionsTotal: (data, dataOld) => {
+      if (dataOld != 0) {
+        alertify.success('Uma nova sugestão foi enviada por outro usuário!');
+      }
+    },
+    questionsOrdered: (data, dataOld) => {
+      let diff = _.differenceBy(data, dataOld);
+
+      if (diff.length != 1) {
+        return;
+      }
+
+      diff = diff[0];
+
+      if (diff.label == undefined && diff.voting == undefined) {
+        return;
+      }
+
+      let msg = 'Sugestão <strong>'+diff.label+'</strong> agora tem <strong>'+diff.voting+'</strong> voto';
+
+      if (diff.voting != 1) {
+        msg += 's';
+      }
+      msg +='!';
+
+      alertify.success(msg);
+    }
+  },
   methods: {
     add: function() {
-      console.log(!this.add_question);
       if (!this.add_question) {
         alertify.warning('O campo está vazio!');
         return;
@@ -77,8 +116,9 @@ export default {
     vote: function(index) {
       this.$firebaseRefs.questions.child(index).once('value').then((result)=>{
         let checkVote = false;
+        let users = result.val().users || [];
 
-        result.val().users.forEach((item)=>{
+        users.forEach((item)=>{
           if (item == this.isLogged.email) {
             checkVote = true;
           }
@@ -92,7 +132,6 @@ export default {
         let data = {};
         data[index+'/voting'] = result.val().voting + 1;
 
-        let users = result.val().users;
         users.push(this.isLogged.email);
         data[index+'/users'] = users;
 
